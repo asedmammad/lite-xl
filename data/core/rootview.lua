@@ -500,7 +500,6 @@ function Node:resize(axis, value)
     -- resize operation here because for proportional panes the resize is
     -- done using the "divider" value of the parent node.
     if (self.locked and self.locked[axis]) and self.resizable then
-      assert(self.active_view.set_target_size, "internal error: the view of a resizable \"locked\" node do not provide a set_target_size method")
       return self.active_view:set_target_size(axis, value)
     end
   else

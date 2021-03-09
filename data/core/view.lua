@@ -11,10 +11,20 @@ local View = Object:extend()
 function View:new()
   self.position = { x = 0, y = 0 }
   self.size = { x = 0, y = 0 }
+  self.target_size = { }
   self.scroll = { x = 0, y = 0, to = { x = 0, y = 0 } }
   self.cursor = "arrow"
   self.scrollable = false
 end
+
+
+function View:set_target_size(axis, value)
+  if self.target_size[axis] then
+    self.target_size[axis] = value
+    return true
+  end
+end
+
 
 function View:move_towards(t, k, dest, rate)
   if type(t) ~= "table" then

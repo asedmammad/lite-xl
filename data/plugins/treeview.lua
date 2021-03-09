@@ -24,17 +24,9 @@ function TreeView:new()
   self.scrollable = true
   self.visible = true
   self.init_size = true
-  self.target_size = default_treeview_size
+  self.target_size.x = default_treeview_size
   self.cache = {}
   self.last = {}
-end
-
-
-function TreeView:set_target_size(axis, value)
-  if axis == "x" then
-    self.target_size = value
-    return true
-  end
 end
 
 
@@ -194,7 +186,7 @@ end
 
 function TreeView:update()
   -- update width
-  local dest = self.visible and self.target_size or 0
+  local dest = self.visible and self.target_size.x or 0
   if self.init_size then
     self.size.x = dest
     self.init_size = false

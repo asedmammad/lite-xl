@@ -6,6 +6,7 @@
 #include "font_renderer.h"
 
 #define MAX_GLYPHSET 256
+#define REPLACEMENT_CHUNK_SIZE 8
 
 struct RenImage {
   RenColor *pixels;
@@ -18,6 +19,22 @@ struct GlyphSet {
 };
 typedef struct GlyphSet GlyphSet;
 
+
+struct CPReplace {
+  unsigned codepoint_src;
+  unsigned codepoint_dst;
+  FR_Color color;
+  bool replace_color;
+};
+typedef struct CPReplace CPReplace;
+
+
+struct CPLookupTable {
+  int size;
+  CPReplace *replacements;
+};
+typedef struct CPLookupTable CPLookupTable;
+
 /* The field "padding" below must be there just before GlyphSet *sets[MAX_GLYPHSET]
    because the field "sets" can be indexed and writted with an index -1. For this
    reason the "padding" field must be there but is never explicitly used. */
@@ -27,6 +44,7 @@ struct RenFont {
   float size;
   int height;
   int space_advance;
+  CPLookupTable replace_table;
   FR_Renderer *renderer;
 };
 
@@ -157,6 +175,9 @@ RenFont* ren_load_font(const char *filename, float size, unsigned int renderer_f
   g['\t'].x1 = g['\t'].x0;
   g['\n'].x1 = g['\n'].x0;
 
+  font->replace_table.size = 0;
+  font->replace_table.replacements = NULL;
+
   return font;
 }
 
@@ -169,8 +190,43 @@ void ren_free_font(RenFont *font) {
       free(set);
     }
   }
+  free(font->replace_table.replacements);
   FR_Renderer_Free(font->renderer);
   free(font);
+}
+
+
+void ren_font_clear_replacements(RenFont *font) {
+  free(font->replace_table.replacements);
+  font->replace_table.replacements = NULL;
+  font->replace_table.size = 0;
+}
+
+
+void ren_font_add_replacement(RenFont *font, const char *src, const char *dst, RenColor *color) {
+  int table_size = font->replace_table.size;
+  if (table_size % REPLACEMENT_CHUNK_SIZE == 0) {
+    CPReplace *old_replacements = font->replace_table.replacements;
+    const int new_size = (table_size / REPLACEMENT_CHUNK_SIZE + 1) * REPLACEMENT_CHUNK_SIZE;
+    font->replace_table.replacements = malloc(new_size * sizeof(CPReplace));
+    if (!font->replace_table.replacements) {
+      font->replace_table.replacements = old_replacements;
+      return;
+    }
+    memcpy(font->replace_table.replacements, old_replacements, table_size * sizeof(CPReplace));
+    free(old_replacements);
+  }
+  CPReplace *rep = &font->replace_table.replacements[table_size];
+  utf8_to_codepoint(src, &rep->codepoint_src);
+  utf8_to_codepoint(dst, &rep->codepoint_dst);
+  if (color) {
+    rep->replace_color = true;
+    rep->color = (FR_Color) { .r = color->r, .g = color->g, .b = color->b };
+  } else {
+    rep->replace_color = false;
+    rep->color = (FR_Color) { .r = 0, .g = 0, .b = 0 };
+  }
+  font->replace_table.size = table_size + 1;
 }
 
 
@@ -292,20 +348,41 @@ void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color)
 }
 
 
+static void codepoint_replace(CPLookupTable *lookup, unsigned *codepoint, FR_Color *color) {
+  for (int i = 0; i < lookup->size; i++) {
+    const CPReplace *rep = &lookup->replacements[i];
+    if (*codepoint == rep->codepoint_src) {
+      *codepoint = rep->codepoint_dst;
+      if (rep->replace_color) {
+        *color = rep->color;
+      }
+      break;
+    }
+  }
+}
+
+
 void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color) {
   const char *p = text;
   unsigned codepoint;
   SDL_Surface *surf = SDL_GetWindowSurface(window);
   FR_Color color_fr = { .r = color.r, .g = color.g, .b = color.b };
   while (*p) {
+    FR_Color color_rep = color_fr;
     p = utf8_to_codepoint(p, &codepoint);
     GlyphSet *set = get_glyphset(font, codepoint);
     FR_Bitmap_Glyph_Metrics *g = &set->glyphs[codepoint & 0xff];
+    const int xadvance_original_cp = g->xadvance;
+    if (font->replace_table.size > 0) {
+      codepoint_replace(&font->replace_table, &codepoint, &color_rep);
+      set = get_glyphset(font, codepoint);
+      g = &set->glyphs[codepoint & 0xff];
+    }
     if (color.a != 0) {
       FR_Blend_Glyph(font->renderer, &clip,
-        x_subpixel, y, (uint8_t *) surf->pixels, surf->w, set->image, g, color_fr);
+        x_subpixel, y, (uint8_t *) surf->pixels, surf->w, set->image, g, color_rep);
     }
-    x_subpixel += g->xadvance;
+    x_subpixel += xadvance_original_cp;
   }
 }
 

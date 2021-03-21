@@ -1,4 +1,5 @@
 #include "api.h"
+#include "api_utils.h"
 #include "renderer.h"
 #include "rencache.h"
 
@@ -95,14 +96,37 @@ static int f_get_height(lua_State *L) {
 }
 
 
+static int f_add_replacement(lua_State *L) {
+  RenFont **self = luaL_checkudata(L, 1, API_TYPE_FONT);
+  const char *src = luaL_checkstring(L, 2);
+  const char *dst = luaL_checkstring(L, 3);
+  if (lua_gettop(L) >= 4) {
+    RenColor color = checkcolor(L, 4, 255);
+    ren_font_add_replacement(*self, src, dst, &color);
+  } else {
+    ren_font_add_replacement(*self, src, dst, NULL);
+  }
+  return 0;
+}
+
+
+static int f_clear_replacements(lua_State *L) {
+  RenFont **self = luaL_checkudata(L, 1, API_TYPE_FONT);
+  ren_font_clear_replacements(*self);
+  return 0;
+}
+
+
 static const luaL_Reg lib[] = {
   { "__gc",               f_gc                 },
   { "load",               f_load               },
-  { "set_tab_size",       f_set_tab_size      },
+  { "set_tab_size",       f_set_tab_size       },
   { "get_width",          f_get_width          },
   { "get_width_subpixel", f_get_width_subpixel },
   { "get_height",         f_get_height         },
   { "subpixel_scale",     f_subpixel_scale     },
+  { "add_replacement",    f_add_replacement    },
+  { "clear_replacements", f_clear_replacements },
   { NULL, NULL }
 };
 

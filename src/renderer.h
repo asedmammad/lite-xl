@@ -38,6 +38,8 @@ int ren_get_font_width(RenFont *font, const char *text, int *subpixel_scale);
 int ren_get_font_height(RenFont *font);
 int ren_get_font_subpixel_scale(RenFont *font);
 int ren_font_subpixel_round(int width, int subpixel_scale, int orientation);
+void ren_font_add_replacement(RenFont *font, const char *src, const char *dst, RenColor *color);
+void ren_font_clear_replacements(RenFont *font);
 
 void ren_draw_rect(RenRect rect, RenColor color);
 void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color);

@@ -19,22 +19,6 @@ struct GlyphSet {
 };
 typedef struct GlyphSet GlyphSet;
 
-
-struct CPReplace {
-  unsigned codepoint_src;
-  unsigned codepoint_dst;
-  FR_Color color;
-  bool replace_color;
-};
-typedef struct CPReplace CPReplace;
-
-
-struct CPLookupTable {
-  int size;
-  CPReplace *replacements;
-};
-typedef struct CPLookupTable CPLookupTable;
-
 /* The field "padding" below must be there just before GlyphSet *sets[MAX_GLYPHSET]
    because the field "sets" can be indexed and writted with an index -1. For this
    reason the "padding" field must be there but is never explicitly used. */
@@ -44,7 +28,6 @@ struct RenFont {
   float size;
   int height;
   int space_advance;
-  CPLookupTable replace_table;
   FR_Renderer *renderer;
 };
 
@@ -348,35 +331,37 @@ void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color)
 }
 
 
-static void codepoint_replace(CPLookupTable *lookup, unsigned *codepoint, FR_Color *color) {
-  for (int i = 0; i < lookup->size; i++) {
-    const CPReplace *rep = &lookup->replacements[i];
-    if (*codepoint == rep->codepoint_src) {
-      *codepoint = rep->codepoint_dst;
-      if (rep->replace_color) {
-        *color = rep->color;
-      }
-      break;
+static unsigned codepoint_replace(CPReplaceTable *rep_table, unsigned codepoint) {
+  for (int i = 0; i < rep_table->size; i++) {
+    const CPReplace *rep = &rep_table->replacements[i];
+    if (codepoint == rep->codepoint_src) {
+      return rep->codepoint_dst;
     }
   }
+  return codepoint;
 }
 
 
-void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color) {
+void ren_draw_text_subpixel_repl(RenFont *font, const char *text, int x_subpixel, int y, RenColor color,
+  CPReplaceTable *replacements, RenColor replace_color)
+{
   const char *p = text;
   unsigned codepoint;
   SDL_Surface *surf = SDL_GetWindowSurface(window);
-  FR_Color color_fr = { .r = color.r, .g = color.g, .b = color.b };
+  const FR_Color color_fr = { .r = color.r, .g = color.g, .b = color.b };
   while (*p) {
-    FR_Color color_rep = color_fr;
+    FR_Color color_rep;
     p = utf8_to_codepoint(p, &codepoint);
     GlyphSet *set = get_glyphset(font, codepoint);
     FR_Bitmap_Glyph_Metrics *g = &set->glyphs[codepoint & 0xff];
     const int xadvance_original_cp = g->xadvance;
-    if (font->replace_table.size > 0) {
-      codepoint_replace(&font->replace_table, &codepoint, &color_rep);
+    if (replacements) {
+      codepoint = codepoint_replace(replacements, codepoint);
       set = get_glyphset(font, codepoint);
       g = &set->glyphs[codepoint & 0xff];
+      color_rep = (FR_Color) { .r = replace_color.r, .g = replace_color.g, .b = replace_color.b};
+    } else {
+      color_rep = color_fr;
     }
     if (color.a != 0) {
       FR_Blend_Glyph(font->renderer, &clip,
@@ -386,10 +371,22 @@ void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int
   }
 }
 
+void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color) {
+  ren_draw_text_subpixel_repl(font, text, x_subpixel, y, color, NULL, (RenColor) {0})
+}
+
 
 void ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color) {
   const int subpixel_scale = FR_Subpixel_Scale(font->renderer);
-  ren_draw_text_subpixel(font, text, subpixel_scale * x, y, color);
+  ren_draw_text_subpixel_repl(font, text, subpixel_scale * x, y, color, NULL, (RenColor) {0});
+}
+
+
+void ren_draw_text_repl(RenFont *font, const char *text, int x, int y, RenColor color,
+  CPReplaceTable *replacements, RenColor replace_color)
+{
+  const int subpixel_scale = FR_Subpixel_Scale(font->renderer);
+  ren_draw_text_subpixel_repl(font, text, subpixel_scale * x, y, color, replacements, replace_color);
 }
 
 

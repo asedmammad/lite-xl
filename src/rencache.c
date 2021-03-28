@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "cp_replace.h"
 #include "rencache.h"
 
 /* a cache over the software renderer -- all drawing operations are stored as
@@ -11,16 +12,18 @@
 #define CELL_SIZE 96
 #define COMMAND_BUF_SIZE (1024 * 512)
 
-enum { FREE_FONT, SET_CLIP, DRAW_TEXT, DRAW_RECT, DRAW_TEXT_SUBPIXEL };
+enum { FREE_FONT, SET_CLIP, DRAW_TEXT, DRAW_RECT, DRAW_TEXT_EXT, DRAW_TEXT_SUBPIXEL, DRAW_TEXT_SUBPIXEL_EXT };
 
 typedef struct {
-  int type, size;
+  char type, size;
+  char tab_size;
   RenRect rect;
   RenColor color;
   RenFont *font;
-  short int subpixel_scale;
-  short int x_subpixel_offset;
-  int tab_size;
+  char subpixel_scale;
+  char x_subpixel_offset;
+  CPReplaceTable *replacements;
+  RenColor replace_color;
   char text[0];
 } Command;
 
@@ -130,7 +133,9 @@ void rencache_draw_rect(RenRect rect, RenColor color) {
   }
 }
 
-int rencache_draw_text(RenFont *font, const char *text, int x, int y, RenColor color, bool draw_subpixel) {
+int rencache_draw_text(RenFont *font, const char *text, int x, int y, RenColor color,
+  CPReplaceTable *replacements, RenColor replace_color, bool draw_subpixel)
+{
   int subpixel_scale;
   int w_subpixel = ren_get_font_width(font, text, &subpixel_scale);
   RenRect rect;
@@ -141,7 +146,10 @@ int rencache_draw_text(RenFont *font, const char *text, int x, int y, RenColor c
 
   if (rects_overlap(screen_rect, rect)) {
     int sz = strlen(text) + 1;
-    Command *cmd = push_command(draw_subpixel ? DRAW_TEXT_SUBPIXEL : DRAW_TEXT, sizeof(Command) + sz);
+    int cmd_type = replacements ?
+      (draw_subpixel ? DRAW_TEXT_SUBPIXEL_EXT : DRAW_TEXT_EXT) :
+      (draw_subpixel ? DRAW_TEXT_SUBPIXEL     : DRAW_TEXT);
+    Command *cmd = push_command(cmd_type, sizeof(Command) + sz);
     if (cmd) {
       memcpy(cmd->text, text, sz);
       cmd->color = color;
@@ -150,6 +158,10 @@ int rencache_draw_text(RenFont *font, const char *text, int x, int y, RenColor c
       cmd->subpixel_scale = (draw_subpixel ? subpixel_scale : 1);
       cmd->x_subpixel_offset = x - subpixel_scale * rect.x;
       cmd->tab_size = ren_get_font_tab_size(font);
+      if (replacements) {
+        cmd->replacements = replacements;
+        cmd->replace_color = replace_color;
+      }
     }
   }
 
@@ -267,6 +279,14 @@ void rencache_end_frame(void) {
         case DRAW_TEXT_SUBPIXEL:
           ren_set_font_tab_size(cmd->font, cmd->tab_size);
           ren_draw_text_subpixel(cmd->font, cmd->text, cmd->subpixel_scale * cmd->rect.x + cmd->x_subpixel_offset, cmd->rect.y, cmd->color);
+          break;
+        case DRAW_TEXT_EXT:
+          ren_set_font_tab_size(cmd->font, cmd->tab_size);
+          ren_draw_text_repl(cmd->font, cmd->text, cmd->rect.x, cmd->rect.y, cmd->color, cmd->replacements, cmd->replace_color);
+          break;
+        case DRAW_TEXT_SUBPIXEL_EXT:
+          ren_set_font_tab_size(cmd->font, cmd->tab_size);
+          ren_draw_text_subpixel_repl(cmd->font, cmd->text, cmd->subpixel_scale * cmd->rect.x + cmd->x_subpixel_offset, cmd->rect.y, cmd->color, cmd->replacements, cmd->replace_color);
           break;
       }
     }

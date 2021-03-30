@@ -6,7 +6,6 @@
 #include "font_renderer.h"
 
 #define MAX_GLYPHSET 256
-#define REPLACEMENT_CHUNK_SIZE 8
 
 struct RenImage {
   RenColor *pixels;
@@ -158,9 +157,6 @@ RenFont* ren_load_font(const char *filename, float size, unsigned int renderer_f
   g['\t'].x1 = g['\t'].x0;
   g['\n'].x1 = g['\n'].x0;
 
-  font->replace_table.size = 0;
-  font->replace_table.replacements = NULL;
-
   return font;
 }
 
@@ -178,39 +174,6 @@ void ren_free_font(RenFont *font) {
   free(font);
 }
 
-
-void ren_font_clear_replacements(RenFont *font) {
-  free(font->replace_table.replacements);
-  font->replace_table.replacements = NULL;
-  font->replace_table.size = 0;
-}
-
-
-void ren_font_add_replacement(RenFont *font, const char *src, const char *dst, RenColor *color) {
-  int table_size = font->replace_table.size;
-  if (table_size % REPLACEMENT_CHUNK_SIZE == 0) {
-    CPReplace *old_replacements = font->replace_table.replacements;
-    const int new_size = (table_size / REPLACEMENT_CHUNK_SIZE + 1) * REPLACEMENT_CHUNK_SIZE;
-    font->replace_table.replacements = malloc(new_size * sizeof(CPReplace));
-    if (!font->replace_table.replacements) {
-      font->replace_table.replacements = old_replacements;
-      return;
-    }
-    memcpy(font->replace_table.replacements, old_replacements, table_size * sizeof(CPReplace));
-    free(old_replacements);
-  }
-  CPReplace *rep = &font->replace_table.replacements[table_size];
-  utf8_to_codepoint(src, &rep->codepoint_src);
-  utf8_to_codepoint(dst, &rep->codepoint_dst);
-  if (color) {
-    rep->replace_color = true;
-    rep->color = (FR_Color) { .r = color->r, .g = color->g, .b = color->b };
-  } else {
-    rep->replace_color = false;
-    rep->color = (FR_Color) { .r = 0, .g = 0, .b = 0 };
-  }
-  font->replace_table.size = table_size + 1;
-}
 
 
 void ren_set_font_tab_size(RenFont *font, int n) {
@@ -371,6 +334,14 @@ void ren_draw_text_subpixel_repl(RenFont *font, const char *text, int x_subpixel
   }
 }
 
+void ren_draw_text_repl(RenFont *font, const char *text, int x, int y, RenColor color,
+  CPReplaceTable *replacements, RenColor replace_color)
+{
+  const int subpixel_scale = FR_Subpixel_Scale(font->renderer);
+  ren_draw_text_subpixel_repl(font, text, subpixel_scale * x, y, color, replacements, replace_color);
+}
+
+#if 0
 void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color) {
   ren_draw_text_subpixel_repl(font, text, x_subpixel, y, color, NULL, (RenColor) {0})
 }
@@ -380,16 +351,9 @@ void ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color
   const int subpixel_scale = FR_Subpixel_Scale(font->renderer);
   ren_draw_text_subpixel_repl(font, text, subpixel_scale * x, y, color, NULL, (RenColor) {0});
 }
+#endif
 
-
-void ren_draw_text_repl(RenFont *font, const char *text, int x, int y, RenColor color,
-  CPReplaceTable *replacements, RenColor replace_color)
-{
-  const int subpixel_scale = FR_Subpixel_Scale(font->renderer);
-  ren_draw_text_subpixel_repl(font, text, subpixel_scale * x, y, color, replacements, replace_color);
-}
-
-
+// FIXME: declare as static inline
 int ren_font_subpixel_round(int width, int subpixel_scale, int orientation) {
   int w_mult;
   if (orientation < 0) {

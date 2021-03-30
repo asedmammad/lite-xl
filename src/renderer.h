@@ -44,8 +44,10 @@ void ren_font_clear_replacements(RenFont *font);
 
 void ren_draw_rect(RenRect rect, RenColor color);
 void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color);
+#if 0
 void ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color);
 void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color);
+#endif
 void ren_draw_text_repl(RenFont *font, const char *text, int x, int y, RenColor color, CPReplaceTable *replacements, RenColor replace_color);
 void ren_draw_text_subpixel_repl(RenFont *font, const char *text, int x_subpixel, int y, RenColor color, CPReplaceTable *replacements, RenColor replace_color);
 

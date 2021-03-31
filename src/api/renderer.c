@@ -78,7 +78,18 @@ static int f_draw_text(lua_State *L) {
   int x = luaL_checknumber(L, 3);
   int y = luaL_checknumber(L, 4);
   RenColor color = checkcolor(L, 5, 255);
-  x = rencache_draw_text(*font, text, x, y, color, false);
+
+  CPReplaceTable *rep_table;
+  RenColor replace_color;
+  if (lua_gettop(L) >= 7) {
+    rep_table = luaL_checkudata(L, 6, API_TYPE_REPLACE);
+    replace_color = checkcolor(L, 7, 255);
+  } else {
+    rep_table = NULL;
+    replace_color = (RenColor) {0};
+  }
+
+  x = rencache_draw_text(*font, text, x, y, color, rep_table, replace_color, false);
   lua_pushnumber(L, x);
   return 1;
 }
@@ -90,7 +101,18 @@ static int f_draw_text_subpixel(lua_State *L) {
   int x_subpixel = luaL_checknumber(L, 3);
   int y = luaL_checknumber(L, 4);
   RenColor color = checkcolor(L, 5, 255);
-  x_subpixel = rencache_draw_text(*font, text, x_subpixel, y, color, true);
+
+  CPReplaceTable *rep_table;
+  RenColor replace_color;
+  if (lua_gettop(L) >= 7) {
+    rep_table = luaL_checkudata(L, 6, API_TYPE_REPLACE);
+    replace_color = checkcolor(L, 7, 255);
+  } else {
+    rep_table = NULL;
+    replace_color = (RenColor) {0};
+  }
+
+  x_subpixel = rencache_draw_text(*font, text, x_subpixel, y, color, rep_table, replace_color, true);
   lua_pushnumber(L, x_subpixel);
   return 1;
 }
@@ -110,10 +132,13 @@ static const luaL_Reg lib[] = {
 
 
 int luaopen_renderer_font(lua_State *L);
+int luaopen_renderer_replacements(lua_State *L);
 
 int luaopen_renderer(lua_State *L) {
   luaL_newlib(L, lib);
   luaopen_renderer_font(L);
   lua_setfield(L, -2, "font");
+  luaopen_renderer_replacements(L);
+  lua_setfield(L, -2, "replacements");
   return 1;
 }

@@ -4,7 +4,6 @@ lite_sources = [
     'api/renderer.c',
     'api/renderer_font.c',
     'api/system.c',
-    'cp_replace.c',
     'renderer.c',
     'rencache.c',
     'xrdb_parse.c',

@@ -6,6 +6,7 @@
 #include "font_renderer.h"
 
 #define MAX_GLYPHSET 256
+#define REPLACEMENT_CHUNK_SIZE 8
 
 struct RenImage {
   RenColor *pixels;
@@ -57,6 +58,37 @@ static const char* utf8_to_codepoint(const char *p, unsigned *dst) {
   }
   *dst = res;
   return p + 1;
+}
+
+
+void ren_cp_replace_init(CPReplaceTable *rep_table) {
+  rep_table->size = 0;
+  rep_table->replacements = NULL;
+}
+
+
+void ren_cp_replace_free(CPReplaceTable *rep_table) {
+  free(rep_table->replacements);
+}
+
+
+void ren_cp_replace_add(CPReplaceTable *rep_table, const char *src, const char *dst) {
+  int table_size = rep_table->size;
+  if (table_size % REPLACEMENT_CHUNK_SIZE == 0) {
+    CPReplace *old_replacements = rep_table->replacements;
+    const int new_size = (table_size / REPLACEMENT_CHUNK_SIZE + 1) * REPLACEMENT_CHUNK_SIZE;
+    rep_table->replacements = malloc(new_size * sizeof(CPReplace));
+    if (!rep_table->replacements) {
+      rep_table->replacements = old_replacements;
+      return;
+    }
+    memcpy(rep_table->replacements, old_replacements, table_size * sizeof(CPReplace));
+    free(old_replacements);
+  }
+  CPReplace *rep = &rep_table->replacements[table_size];
+  utf8_to_codepoint(src, &rep->codepoint_src);
+  utf8_to_codepoint(dst, &rep->codepoint_dst);
+  rep_table->size = table_size + 1;
 }
 
 
@@ -291,7 +323,6 @@ void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color)
   }
 }
 
-// FIXME: this function does not belong here
 static int codepoint_replace(CPReplaceTable *rep_table, unsigned *codepoint) {
   for (int i = 0; i < rep_table->size; i++) {
     const CPReplace *rep = &rep_table->replacements[i];
@@ -304,7 +335,7 @@ static int codepoint_replace(CPReplaceTable *rep_table, unsigned *codepoint) {
 }
 
 
-void ren_draw_text_subpixel_repl(RenFont *font, const char *text, int x_subpixel, int y, RenColor color,
+void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color,
   CPReplaceTable *replacements, RenColor replace_color)
 {
   const char *p = text;
@@ -333,11 +364,11 @@ void ren_draw_text_subpixel_repl(RenFont *font, const char *text, int x_subpixel
   }
 }
 
-void ren_draw_text_repl(RenFont *font, const char *text, int x, int y, RenColor color,
+void ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color,
   CPReplaceTable *replacements, RenColor replace_color)
 {
   const int subpixel_scale = FR_Subpixel_Scale(font->renderer);
-  ren_draw_text_subpixel_repl(font, text, subpixel_scale * x, y, color, replacements, replace_color);
+  ren_draw_text_subpixel(font, text, subpixel_scale * x, y, color, replacements, replace_color);
 }
 
 // FIXME: declare as static inline
@@ -357,3 +388,4 @@ int ren_font_subpixel_round(int width, int subpixel_scale, int orientation) {
 int ren_get_font_subpixel_scale(RenFont *font) {
   return FR_Subpixel_Scale(font->renderer);
 }
+

@@ -3,7 +3,6 @@
 
 #include <SDL.h>
 #include <stdint.h>
-#include "cp_replace.h"
 
 typedef struct RenImage RenImage;
 typedef struct RenFont RenFont;
@@ -21,6 +20,19 @@ enum {
 
 typedef struct { uint8_t b, g, r, a; } RenColor;
 typedef struct { int x, y, width, height; } RenRect;
+
+struct CPReplace {
+  unsigned codepoint_src;
+  unsigned codepoint_dst;
+};
+typedef struct CPReplace CPReplace;
+
+
+struct CPReplaceTable {
+  int size;
+  CPReplace *replacements;
+};
+typedef struct CPReplaceTable CPReplaceTable;
 
 
 void ren_init(SDL_Window *win);
@@ -42,7 +54,12 @@ int ren_font_subpixel_round(int width, int subpixel_scale, int orientation);
 
 void ren_draw_rect(RenRect rect, RenColor color);
 void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color);
-void ren_draw_text_repl(RenFont *font, const char *text, int x, int y, RenColor color, CPReplaceTable *replacements, RenColor replace_color);
-void ren_draw_text_subpixel_repl(RenFont *font, const char *text, int x_subpixel, int y, RenColor color, CPReplaceTable *replacements, RenColor replace_color);
+void ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color, CPReplaceTable *replacements, RenColor replace_color);
+void ren_draw_text_subpixel(RenFont *font, const char *text, int x_subpixel, int y, RenColor color, CPReplaceTable *replacements, RenColor replace_color);
+
+void ren_cp_replace_init(CPReplaceTable *rep_table);
+void ren_cp_replace_free(CPReplaceTable *rep_table);
+void ren_cp_replace_add(CPReplaceTable *rep_table, const char *src, const char *dst);
+void ren_cp_replace_clear(CPReplaceTable *rep_table);
 
 #endif

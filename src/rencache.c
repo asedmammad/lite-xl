@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "cp_replace.h"
 #include "rencache.h"
 
 /* a cache over the software renderer -- all drawing operations are stored as
@@ -271,12 +270,12 @@ void rencache_end_frame(void) {
           break;
         case DRAW_TEXT:
           ren_set_font_tab_size(cmd->font, cmd->tab_size);
-          ren_draw_text_repl(cmd->font, cmd->text, cmd->rect.x, cmd->rect.y, cmd->color,
+          ren_draw_text(cmd->font, cmd->text, cmd->rect.x, cmd->rect.y, cmd->color,
             cmd->replacements, cmd->replace_color);
           break;
         case DRAW_TEXT_SUBPIXEL:
           ren_set_font_tab_size(cmd->font, cmd->tab_size);
-          ren_draw_text_subpixel_repl(cmd->font, cmd->text,
+          ren_draw_text_subpixel(cmd->font, cmd->text,
             cmd->subpixel_scale * cmd->rect.x + cmd->x_subpixel_offset, cmd->rect.y, cmd->color,
             cmd->replacements, cmd->replace_color);
           break;

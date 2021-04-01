@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include "rencache.h"
 
@@ -14,14 +15,14 @@
 enum { FREE_FONT, SET_CLIP, DRAW_TEXT, DRAW_RECT, DRAW_TEXT_SUBPIXEL };
 
 typedef struct {
-  char type;
-  char tab_size;
-  short int size;
+  int8_t type;
+  int8_t tab_size;
+  int8_t subpixel_scale;
+  int8_t x_subpixel_offset;
+  int32_t size;
   RenRect rect;
   RenColor color;
   RenFont *font;
-  char subpixel_scale;
-  char x_subpixel_offset;
   CPReplaceTable *replacements;
   RenColor replace_color;
   char text[0];
@@ -133,9 +134,9 @@ void rencache_draw_rect(RenRect rect, RenColor color) {
   }
 }
 
-// FIXME: we may specialize this function w or wo subpixel and replacements
-int rencache_draw_text(RenFont *font, const char *text, int x, int y, RenColor color,
-  CPReplaceTable *replacements, RenColor replace_color, bool draw_subpixel)
+int rencache_draw_text(RenFont *font,
+  const char *text, int x, int y, RenColor color, bool draw_subpixel,
+  CPReplaceTable *replacements, RenColor replace_color)
 {
   int subpixel_scale;
   int w_subpixel = ren_get_font_width(font, text, &subpixel_scale);

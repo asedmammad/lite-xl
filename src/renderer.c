@@ -371,7 +371,7 @@ void ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color
   ren_draw_text_subpixel(font, text, subpixel_scale * x, y, color, replacements, replace_color);
 }
 
-// FIXME: declare as static inline
+// Could be declared as static inline
 int ren_font_subpixel_round(int width, int subpixel_scale, int orientation) {
   int w_mult;
   if (orientation < 0) {

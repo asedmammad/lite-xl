@@ -314,8 +314,8 @@ function DocView:draw_line_text(idx, x, y)
   local tx, ty = subpixel_scale * x, y + self:get_line_text_y_offset()
   for _, type, text in self.doc.highlighter:each_token(idx) do
     local color = style.syntax[type]
-    if config.draw_whitespace and getmetatable(self) == DocView then
-      tx = renderer.draw_text_subpixel(font, text, tx, ty, color, core.code_replacements, style.syntax.comment)
+    if config.draw_whitespace then
+      tx = renderer.draw_text_subpixel(font, text, tx, ty, color, core.replacements, style.syntax.comment)
     else
       tx = renderer.draw_text_subpixel(font, text, tx, ty, color)
     end

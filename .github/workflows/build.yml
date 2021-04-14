@@ -36,7 +36,7 @@ jobs:
           meson setup build --backend=xcode
       - name: build package
         working-directory: build
-        run:
+        run: |
           xcodebuild -list
           xcodebuild -toolchain clang -configuration Release -target lite -scheme lite
           rm -rf Build/Products/Release/lite.app.dSYM

@@ -38,7 +38,7 @@ jobs:
         working-directory: build
         run: |
           xcodebuild -list
-          xcodebuild -toolchain clang -configuration Release -target lite
+          xcodebuild -toolchain clang -target ALL_BUILD
           rm -rf Build/Products/Release/lite.app.dSYM
       - name: upload build artifacts
         uses: actions/upload-artifact@v2

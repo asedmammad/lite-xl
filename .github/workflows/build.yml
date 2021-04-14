@@ -31,10 +31,12 @@ jobs:
         run: |
           pip3 install meson
           brew install ninja sdl2
-      - name: Build package
+      - name: configure package
         run:
           meson setup build --backend=xcode
-          cd build
+      - name: build package
+        working-directory: build
+        run:
           xcodebuild -list
           xcodebuild -toolchain clang -configuration Release -target lite -scheme lite
           rm -rf Build/Products/Release/lite.app.dSYM

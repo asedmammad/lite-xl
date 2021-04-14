@@ -33,12 +33,12 @@ jobs:
           brew install ninja sdl2
       - name: configure package
         run:
-          meson setup build --backend=xcode
+          meson setup --buildtype=release build --backend=xcode
       - name: build package
         working-directory: build
         run: |
           xcodebuild -list
-          xcodebuild -toolchain clang -configuration Release -target lite -scheme lite
+          xcodebuild -toolchain clang -configuration Release -target lite
           rm -rf Build/Products/Release/lite.app.dSYM
       - name: upload build artifacts
         uses: actions/upload-artifact@v2

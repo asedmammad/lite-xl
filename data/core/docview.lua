@@ -32,6 +32,16 @@ DocView.translate = {
     return line + (max - min), 1
   end,
 
+  ["next_half_page"] = function(doc, line, col, dv)
+    local min, max = dv:get_visible_line_range()
+    return line + math.floor((max - min) / 2), 1
+  end,
+
+  ["previous_half_page"] = function(doc, line, col, dv)
+    local min, max = dv:get_visible_line_range()
+    return line - math.floor((max - min) / 2), 1
+  end,
+
   ["previous_line"] = function(doc, line, col, dv)
     if line == 1 then
       return 1, 1

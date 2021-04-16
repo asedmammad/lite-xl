@@ -199,6 +199,10 @@ function vim.on_text_input(mode, text_raw, stroke)
         command_buffer:reset()
       end
       return true
+    elseif stroke == 'ctrl+d' then
+      command.perform('doc:move-to-next-half-page')
+    elseif stroke == 'ctrl+u' then
+      command.perform('doc:move-to-previous-half-page')
     elseif stroke == 'escape' then
       core.active_view:set_editing_mode('command')
       command_buffer:reset()

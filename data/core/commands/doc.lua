@@ -351,6 +351,8 @@ local translations = {
   ["next-line"] = DocView.translate.next_line,
   ["previous-page"] = DocView.translate.previous_page,
   ["next-page"] = DocView.translate.next_page,
+  ["previous-half-page"] = DocView.translate.previous_half_page,
+  ["next-half-page"] = DocView.translate.next_half_page,
 }
 
 for name, fn in pairs(translations) do
